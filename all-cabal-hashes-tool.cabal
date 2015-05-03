@@ -1,0 +1,28 @@
+name:                all-cabal-hashes-tool
+version:             0.1.0.0
+synopsis:            Tool for creating the all-cabal-hashes repository
+homepage:            https://github.com/commercialhaskell/all-cabal-hashes-tool
+license:             MIT
+license-file:        LICENSE
+author:              Michael Snoyman
+maintainer:          michael@snoyman.com
+category:            Distribution
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+executable all-cabal-hashes-tool
+  main-is:             all-cabal-hashes-tool.hs
+  build-depends:       base >=4.7 && <4.8
+                     , classy-prelude-conduit
+                     , tar
+                     , cryptohash
+                     , cryptohash-conduit
+                     , http-conduit
+                     , http-types
+                     , system-filepath
+                     , system-fileio
+                     , conduit-extra
+                     , base16-bytestring
+                     , aeson
+  default-language:    Haskell2010
