@@ -1,6 +1,7 @@
 name:                all-cabal-hashes-tool
 version:             0.1.0.0
 synopsis:            Tool for creating the all-cabal-hashes repository
+description:         Tool for creating the all-cabal-hashes repository
 homepage:            https://github.com/commercialhaskell/all-cabal-hashes-tool
 license:             MIT
 license-file:        LICENSE
