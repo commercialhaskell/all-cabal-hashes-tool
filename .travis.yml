@@ -38,7 +38,3 @@ script:
  - cp dist/build/all-cabal-hashes-tool/all-cabal-hashes-tool to-travis
  - strip to-travis/all-cabal-hashes-tool
  - bzip2 to-travis/all-cabal-hashes-tool
-
- - cabal test
- - cabal check
- - cabal sdist   # tests that a source-distribution can be generated
