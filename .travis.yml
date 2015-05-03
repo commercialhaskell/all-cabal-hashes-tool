@@ -1,8 +1,8 @@
 deploy:
   provider: s3
-  access_key_id: AKIAI5DCW74VHQYKQPAA
+  access_key_id: AKIAIAVQAXMLLEPM4I5A
   secret_access_key:
-    secure: jV7LhIXkrYZFGiaHtOGRu4FJau8xtbmflf4CNR2hfxTwUTIMKwEG9JMrZREFTHg3UK/RjlKiA3nIkKSbMZ6raCA4nLfAfJVJxr8ku7ZvSzVAFprcg1y98k87tdQzO5aF/BdfMdoz+SxcXynx02veTk9baeHvUn672Fuhil2Jc+U=
+    secure: MMu6HLVnsKQmRN98hPjxcALn21UP5rgmrCQt17HC5EQLKR+O/CuTngU3cZoIWIlkQrl1KIBZ5uAFBO5ywtYC8CGUfhZWBjt8IPUNWQRkKmbRYEB06qcybpdVGjt6X2i6E4hWWvThagpczWYZ30isbWBSDRaL8lxMMyEnkMxlCUQ=
   bucket: stackage-travis
   acl: public_read
   skip_cleanup: true
