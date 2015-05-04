@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude     #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -13,10 +14,11 @@ import           Crypto.Hash.Conduit         (sinkHash)
 import           Crypto.Hash.Types           (Digest (Digest))
 import           Data.Aeson                  (FromJSON (..), ToJSON (..),
                                               eitherDecode', encode, object,
-                                              withObject, (.:), (.=))
+                                              withObject, (.:), (.:?), (.=))
 import qualified Data.ByteString.Base16      as B16
 import           Data.Conduit.Lazy           (lazyConsume)
 import           Data.Conduit.Zlib           (ungzip)
+import qualified Data.Text.Lazy.Builder.Int
 import           Filesystem                  (createTree, isFile)
 import           Filesystem.Path             (dropExtension, parent)
 import           Network.HTTP.Client.Conduit (HasHttpManager, HttpException (StatusCodeException),
@@ -73,7 +75,7 @@ handleEntry entry
     | Just (pkg, ver) <- toPkgVer $ Tar.entryPath entry
     , Tar.NormalFile lbs _ <- Tar.entryContent entry = do
         exists <- liftIO $ isFile jsonfp
-        (downloadTry, mpackage) <- if exists
+        mpackage0 <- if exists
             then do
                 eres <- eitherDecode' <$> readFile jsonfp
                 case eres of
@@ -83,8 +85,11 @@ handleEntry entry
                         , ": "
                         , e
                         ]
-                    Right x -> return (0, Just x)
-            else do
+                    Right x -> return $ flatten x
+            else return Nothing
+        (downloadTry, mpackage) <- case mpackage0 of
+            Just package -> return (0, Just package)
+            Nothing -> do
                 mpackage <- computePackage pkg ver
                 forM_ mpackage $ \package -> do
                     liftIO $ createTree $ parent jsonfp
@@ -101,24 +106,32 @@ handleEntry entry
     jsonfp = dropExtension cabalfp <.> "json"
 handleEntry _ = return 0
 
-data Package = Package
-    { _packageHashes    :: Map Text Text
-    , _packageLocations :: [Text] -- ^ why no ToJSON/FromJSON for Vector?
+-- | Kinda like sequence, except not.
+flatten :: Package Maybe -> Maybe (Package Identity)
+flatten (Package h l ms) = Package h l . Identity <$> ms
+
+data Package f = Package
+    { packageHashes    :: Map Text Text
+    , packageLocations :: [Text] -- ^ why no ToJSON/FromJSON for Vector?
+    , packageSize      :: f Word64
     }
-    deriving Show
-instance ToJSON Package where
-    toJSON (Package h l) = object
+instance ToJSON (Package Identity) where
+    toJSON (Package h l (Identity s)) = object
         [ "package-hashes" .= h
         , "package-locations" .= l
+        , "package-size" .= s
         ]
-instance FromJSON Package where
+instance FromJSON (Package Maybe) where
     parseJSON = withObject "Package" $ \o -> Package
         <$> o .: "package-hashes"
         <*> o .: "package-locations"
+        <*> o .:? "package-size"
 
-fromPackage :: Package -> TextBuilder
-fromPackage (Package hashes locations) =
-    fromHashes hashes ++ "\n" ++ fromLocations locations ++ "\n"
+fromPackage :: Package Identity -> TextBuilder
+fromPackage (Package hashes locations (Identity size)) =
+    fromHashes hashes ++ "\n" ++
+    fromLocations locations ++ "\n" ++
+    fromSize size ++ "\n"
 
 fromHashes :: Map Text Text -> TextBuilder
 fromHashes =
@@ -132,6 +145,9 @@ fromLocations =
   where
     go t = "    " ++ toBuilder t ++ "\n"
 
+fromSize :: Word64 -> TextBuilder
+fromSize = ("package-size: " ++) . Data.Text.Lazy.Builder.Int.decimal
+
 toPkgVer :: String -> Maybe (Text, Text)
 toPkgVer s@(stripSuffix ".cabal" . pack -> Just t0)
     | pkg == pkg2 = Just (pkg, ver)
@@ -144,7 +160,7 @@ toPkgVer _ = Nothing
 computePackage :: M env m
                => Text -- ^ package
                -> Text -- ^ version
-               -> m (Maybe Package)
+               -> m (Maybe (Package Identity))
 computePackage pkg ver = do
     putStrLn $ "Computing package information for: " ++ pack pkgver
     s3req <- parseUrl s3url
@@ -153,8 +169,8 @@ computePackage pkg ver = do
     mhashes <- withResponse s3req { checkStatus = \_ _ _ -> Nothing } $ \resS3 -> do
         case statusCode $ responseStatus resS3 of
             200 -> do
-                hashesS3 <- responseBody resS3 $$ hashesSink
-                hashesHackage <- withResponse hackagereq $ \res -> responseBody res $$ hashesSink
+                hashesS3 <- responseBody resS3 $$ pairSink
+                hashesHackage <- withResponse hackagereq $ \res -> responseBody res $$ pairSink
 
                 when (hashesS3 /= hashesHackage) $
                     error $ "Mismatched hashes between S3 and Hackage: " ++ show (pkg, ver, hashesS3, hashesHackage)
@@ -173,7 +189,13 @@ computePackage pkg ver = do
             [ pack hackageurl
             , pack s3url
             ]
-    return $ flip Package locations <$> mhashes
+    return $ case mhashes of
+        Nothing -> Nothing
+        Just (hashes, size) -> Just Package
+            { packageHashes = hashes
+            , packageLocations = locations
+            , packageSize = Identity size
+            }
   where
     pkgver = unpack pkg ++ '-' : unpack ver
     hackageurl = concat
@@ -188,7 +210,8 @@ computePackage pkg ver = do
         , pkgver
         , ".tar.gz"
         ]
-    hashesSink = getZipSink $ fmap unions $ sequenceA
+    pairSink = getZipSink $ (,) <$> hashesSink <*> ZipSink lengthCE
+    hashesSink = fmap unions $ sequenceA
         [ mkSink SHA1
         , mkSink SHA256
         , mkSink SHA512

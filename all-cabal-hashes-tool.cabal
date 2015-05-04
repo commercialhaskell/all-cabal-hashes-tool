@@ -26,4 +26,5 @@ executable all-cabal-hashes-tool
                      , conduit-extra
                      , base16-bytestring
                      , aeson
+                     , text
   default-language:    Haskell2010
