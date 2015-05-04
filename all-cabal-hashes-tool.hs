@@ -42,7 +42,7 @@ main = withManager $ do
         entries <- Tar.read . fromChunks <$> lazyConsume src
         sourceEntries entries
             $$ mapMC handleEntry
-            =$ limitTo 5000
+            =$ limitTo 500
 
 withIndex :: M env m
           => (Source m ByteString -> m a)
