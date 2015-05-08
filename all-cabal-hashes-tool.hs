@@ -136,18 +136,18 @@ fromPackage (Package hashes locations (Identity size)) =
 
 fromHashes :: Map Text Text -> TextBuilder
 fromHashes =
-    ("package-hashes:\n" ++) . foldMap go . mapToList
+    ("x-package-hashes:\n" ++) . foldMap go . mapToList
   where
     go (name, val) = "    " ++ toBuilder name ++ ":" ++ toBuilder val ++ "\n"
 
 fromLocations :: [Text] -> TextBuilder
 fromLocations =
-    ("package-locations:\n" ++) . foldMap go
+    ("x-package-locations:\n" ++) . foldMap go
   where
     go t = "    " ++ toBuilder t ++ "\n"
 
 fromSize :: Word64 -> TextBuilder
-fromSize = ("package-size: " ++) . Data.Text.Lazy.Builder.Int.decimal
+fromSize = ("x-package-size: " ++) . Data.Text.Lazy.Builder.Int.decimal
 
 toPkgVer :: String -> Maybe (Text, Text)
 toPkgVer s@(stripSuffix ".cabal" . pack -> Just t0)
