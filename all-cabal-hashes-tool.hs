@@ -96,9 +96,8 @@ handleEntry entry
                     writeFile jsonfp $ encode package
                 return (1, mpackage)
         forM_ mpackage $ \package -> writeFile cabalfp $ concat
-            [ lbs
-            , "\n\n"
-            , encodeUtf8 $ builderToLazy $ fromPackage package
+            [ encodeUtf8 $ builderToLazy $ fromPackage package
+            , lbs
             ]
         return downloadTry
   where
@@ -129,9 +128,11 @@ instance FromJSON (Package Maybe) where
 
 fromPackage :: Package Identity -> TextBuilder
 fromPackage (Package hashes locations (Identity size)) =
+    "-- BEGIN Added by all-cabal-hashes-tool\n" ++
     fromHashes hashes ++ "\n" ++
     fromLocations locations ++ "\n" ++
-    fromSize size ++ "\n"
+    fromSize size ++ "\n" ++
+    "-- END Added by all-cabal-hashes-tool\n\n"
 
 fromHashes :: Map Text Text -> TextBuilder
 fromHashes =
