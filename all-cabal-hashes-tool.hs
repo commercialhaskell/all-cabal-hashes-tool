@@ -96,7 +96,7 @@ handleEntry entry
                     writeFile jsonfp $ encode package
                 return (1, mpackage)
         forM_ mpackage $ \package -> writeFile cabalfp $ concat
-            [ encodeUtf8 $ builderToLazy $ fromPackage package
+            [ encodeUtf8 $ builderToLazy $ fromPackage (getIndent lbs) package
             , lbs
             ]
         return downloadTry
@@ -104,6 +104,15 @@ handleEntry entry
     cabalfp = fromString $ Tar.entryPath entry
     jsonfp = dropExtension cabalfp <.> "json"
 handleEntry _ = return 0
+
+-- | Cabal apparently allows the entire file to be indented... sure why not.
+-- Determine that indentation level so that we can match it later.
+getIndent :: LByteString -> Int
+getIndent =
+    maybe 0 (length . takeWhile (== ' ')) . listToMaybe . filter isName . lines . decodeUtf8
+  where
+    isName :: LText -> Bool
+    isName = (== "name") . takeWhile (/= ':') . dropWhile (== ' ') . toLower
 
 -- | Kinda like sequence, except not.
 flatten :: Package Maybe -> Maybe (Package Identity)
@@ -126,13 +135,15 @@ instance FromJSON (Package Maybe) where
         <*> o .: "package-locations"
         <*> o .:? "package-size"
 
-fromPackage :: Package Identity -> TextBuilder
-fromPackage (Package hashes locations (Identity size)) =
+fromPackage :: Int -> Package Identity -> TextBuilder
+fromPackage indent' (Package hashes locations (Identity size)) =
     "-- BEGIN Added by all-cabal-hashes-tool\n" ++
-    fromHashes hashes ++ "\n" ++
-    fromLocations locations ++ "\n" ++
-    fromSize size ++ "\n" ++
+    indent ++ fromHashes hashes ++ "\n" ++
+    indent ++ fromLocations locations ++ "\n" ++
+    indent ++ fromSize size ++ "\n" ++
     "-- END Added by all-cabal-hashes-tool\n\n"
+  where
+    indent = toBuilder $ asText $ replicate indent' ' '
 
 fromHashes :: Map Text Text -> TextBuilder
 fromHashes =
