@@ -95,10 +95,11 @@ handleEntry entry
                     liftIO $ createTree $ parent jsonfp
                     writeFile jsonfp $ encode package
                 return (1, mpackage)
-        forM_ mpackage $ \package -> writeFile cabalfp $ concat
-            [ encodeUtf8 $ builderToLazy $ fromPackage (getIndent lbs) package
-            , lbs
-            ]
+        when False $ -- no longer adding data to .cabal files
+            forM_ mpackage $ \package -> writeFile cabalfp $ concat
+                [ encodeUtf8 $ builderToLazy $ fromPackage (getIndent lbs) package
+                , lbs
+                ]
         return downloadTry
   where
     cabalfp = fromString $ Tar.entryPath entry
