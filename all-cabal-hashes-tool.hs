@@ -100,6 +100,11 @@ handleEntry entry
   where
     cabalfp = fromString $ Tar.entryPath entry
     jsonfp = dropExtension cabalfp <.> "json"
+handleEntry entry
+    | Tar.entryPath entry == "preferred-versions"
+    , Tar.NormalFile lbs _ <- Tar.entryContent entry = do
+        writeFile "preferred-versions" lbs
+        return 0
 handleEntry _ = return 0
 
 -- | Cabal apparently allows the entire file to be indented... sure why not.
