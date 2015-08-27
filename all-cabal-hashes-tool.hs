@@ -19,14 +19,14 @@ import qualified Data.ByteString.Base16      as B16
 import           Data.Conduit.Lazy           (lazyConsume)
 import           Data.Conduit.Zlib           (ungzip)
 import qualified Data.Text.Lazy.Builder.Int
-import           Filesystem                  (createTree, isFile)
-import           Filesystem.Path             (dropExtension, parent)
 import           Network.HTTP.Client.Conduit (HasHttpManager, HttpException (StatusCodeException),
                                               checkStatus, parseUrl,
                                               responseBody, responseCookieJar,
                                               responseHeaders, responseStatus,
                                               withManager, withResponse)
 import           Network.HTTP.Types          (statusCode)
+import           System.Directory
+import           System.FilePath             (dropExtension, takeDirectory)
 
 type M env m =
     ( HasHttpManager env
@@ -74,14 +74,14 @@ handleEntry :: M env m => Tar.Entry -> m Int
 handleEntry entry
     | Just (pkg, ver) <- toPkgVer $ Tar.entryPath entry
     , Tar.NormalFile lbs _ <- Tar.entryContent entry = do
-        exists <- liftIO $ isFile jsonfp
+        exists <- liftIO $ doesFileExist jsonfp
         mpackage0 <- if exists
             then do
                 eres <- eitherDecode' <$> readFile jsonfp
                 case eres of
                     Left e -> error $ concat
                         [ "Could not parse "
-                        , fpToString jsonfp
+                        , jsonfp
                         , ": "
                         , e
                         ]
@@ -92,7 +92,7 @@ handleEntry entry
             Nothing -> do
                 mpackage <- computePackage pkg ver
                 forM_ mpackage $ \package -> do
-                    liftIO $ createTree $ parent jsonfp
+                    liftIO $ createDirectoryIfMissing True $ dropExtension jsonfp
                     writeFile jsonfp $ encode package
                 return (1, mpackage)
         writeFile cabalfp lbs
