@@ -26,7 +26,7 @@ import           Network.HTTP.Client.Conduit (HasHttpManager, HttpException (Sta
                                               withManager, withResponse)
 import           Network.HTTP.Types          (statusCode)
 import           System.Directory
-import           System.FilePath             (dropExtension, takeDirectory)
+import           System.FilePath             (dropExtension, takeDirectory, takeFileName)
 
 type M env m =
     ( HasHttpManager env
@@ -101,9 +101,11 @@ handleEntry entry
     cabalfp = fromString $ Tar.entryPath entry
     jsonfp = dropExtension cabalfp <.> "json"
 handleEntry entry
-    | Tar.entryPath entry == "preferred-versions"
+    | takeFileName (Tar.entryPath entry) == "preferred-versions"
     , Tar.NormalFile lbs _ <- Tar.entryContent entry = do
-        writeFile "preferred-versions" lbs
+        liftIO $ createDirectoryIfMissing True
+               $ takeDirectory $ Tar.entryPath entry
+        writeFile (Tar.entryPath entry) lbs
         return 0
 handleEntry _ = return 0
 
