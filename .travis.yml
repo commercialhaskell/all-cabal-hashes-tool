@@ -1,5 +1,5 @@
 sudo: false
-language: haskell
+language: c
 
 deploy:
   provider: s3
@@ -18,7 +18,7 @@ deploy:
 addons:
   apt:
     packages:
-    - libgmp-devel
+    - libgmp-dev
 
 before_install:
 # stack
