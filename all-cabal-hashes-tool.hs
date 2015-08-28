@@ -43,6 +43,9 @@ main = withManager $ do
         sourceEntries entries
             $$ mapMC handleEntry
             =$ limitTo 500
+    runResourceT $
+        withResponse "http://hackage.haskell.org/packages/deprecated.json"
+            (($$ sinkFile "deprecated.json") . responseBody)
 
 withIndex :: M env m
           => (Source m ByteString -> m a)
