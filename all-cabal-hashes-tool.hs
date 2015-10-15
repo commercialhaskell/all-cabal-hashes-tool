@@ -90,7 +90,7 @@ handleEntry entry
                         ]
                     Right x -> return $ flatten x
             else return Nothing
-        (downloadTry, _mpackage) <- case mpackage0 of
+        (downloadTry, mpackage) <- case mpackage0 of
             Just package -> return (0, Just package)
             Nothing -> do
                 mpackage <- computePackage pkg ver
@@ -98,7 +98,9 @@ handleEntry entry
                     liftIO $ createDirectoryIfMissing True $ dropExtension jsonfp
                     writeFile jsonfp $ encode package
                 return (1, mpackage)
-        writeFile cabalfp lbs
+        case mpackage of
+            Nothing -> return ()
+            Just _ -> writeFile cabalfp lbs
         return downloadTry
   where
     cabalfp = fromString $ Tar.entryPath entry
