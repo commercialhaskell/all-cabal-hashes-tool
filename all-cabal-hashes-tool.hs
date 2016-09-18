@@ -40,9 +40,7 @@ main :: IO ()
 main = withManager $ do
     withIndex $ \src -> do
         entries <- Tar.read . fromChunks <$> lazyConsume src
-        sourceEntries entries
-            $$ mapMC handleEntry
-            =$ limitTo 500
+        sourceEntries entries $$ mapMC handleEntry
     runResourceT $
         withResponse "https://hackage.haskell.org/packages/deprecated.json"
             (($$ sinkFile "deprecated.json") . responseBody)
@@ -51,7 +49,7 @@ withIndex :: M env m
           => (Source m ByteString -> m a)
           -> m a
 withIndex inner =
-    withResponse "https://s3.amazonaws.com/hackage.fpcomplete.com/packages/archive/00-index.tar.gz"
+    withResponse "https://s3.amazonaws.com/hackage.fpcomplete.com/packages/archive/01-index.tar.gz"
         $ \res -> inner $ responseBody res =$= ungzip
 {-
 withIndex inner = bracket
@@ -64,14 +62,6 @@ sourceEntries :: (Exception e, MonadThrow m) => Tar.Entries e -> Source m Tar.En
 sourceEntries Tar.Done = return ()
 sourceEntries (Tar.Next e rest) = yield e >> sourceEntries rest
 sourceEntries (Tar.Fail e) = throwM e
-
-limitTo :: MonadIO m => Int -> Sink Int m ()
-limitTo total =
-    loop (0 :: Int)
-  where
-    loop cnt
-        | cnt >= total = putStrLn $ "Limiting to " ++ tshow total ++ " downloads in one go"
-        | otherwise = await >>= maybe (return ()) (loop . (cnt +))
 
 handleEntry :: M env m => Tar.Entry -> m Int
 handleEntry entry
