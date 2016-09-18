@@ -7,11 +7,11 @@
 {-# LANGUAGE ViewPatterns          #-}
 import           ClassyPrelude.Conduit
 import qualified Codec.Archive.Tar           as Tar
+import Data.ByteArray.Encoding (convertToBase, Base (Base16))
 import           Crypto.Hash                 (HashAlgorithm, MD5 (..),
                                               SHA1 (..), SHA256 (..),
-                                              SHA512 (..), Skein512_512 (..))
+                                              SHA512 (..), Skein512_512 (..), Digest)
 import           Crypto.Hash.Conduit         (sinkHash)
-import           Crypto.Hash.Types           (Digest (Digest))
 import           Data.Aeson                  (FromJSON (..), ToJSON (..),
                                               eitherDecode', encode, object,
                                               withObject, (.:), (.:?), (.=))
@@ -235,5 +235,5 @@ mkSink ha = ZipSink $ do
     digest <- sinkHash
     return $ singletonMap (tshow ha) $ unDigest ha digest
 
-unDigest :: hash -> Digest hash -> Text
-unDigest _ (Digest bs) = decodeUtf8 $ B16.encode bs
+unDigest :: HashAlgorithm hash => hash -> Digest hash -> Text
+unDigest _ = decodeUtf8 . convertToBase Base16
