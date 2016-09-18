@@ -44,14 +44,14 @@ main = withManager $ do
             $$ mapMC handleEntry
             =$ limitTo 500
     runResourceT $
-        withResponse "http://hackage.haskell.org/packages/deprecated.json"
+        withResponse "https://hackage.haskell.org/packages/deprecated.json"
             (($$ sinkFile "deprecated.json") . responseBody)
 
 withIndex :: M env m
           => (Source m ByteString -> m a)
           -> m a
 withIndex inner =
-    withResponse "https://hackage.haskell.org/packages/archive/00-index.tar.gz"
+    withResponse "https://s3.amazonaws.com/hackage.fpcomplete.com/packages/archive/00-index.tar.gz"
         $ \res -> inner $ responseBody res =$= ungzip
 {-
 withIndex inner = bracket
