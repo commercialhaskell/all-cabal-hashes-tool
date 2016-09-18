@@ -49,7 +49,7 @@ withIndex :: M env m
           => (Source m ByteString -> m a)
           -> m a
 withIndex inner =
-    withResponse "https://s3.amazonaws.com/hackage.fpcomplete.com/packages/archive/01-index.tar.gz"
+    withResponse "https://s3.amazonaws.com/hackage.fpcomplete.com/01-index.tar.gz"
         $ \res -> inner $ responseBody res =$= ungzip
 {-
 withIndex inner = bracket
