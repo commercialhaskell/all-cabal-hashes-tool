@@ -40,7 +40,7 @@ main :: IO ()
 main = withManager $ do
     withIndex $ \src -> do
         entries <- Tar.read . fromChunks <$> lazyConsume src
-        sourceEntries entries $$ mapMC handleEntry
+        sourceEntries entries $$ mapMC handleEntry =$ sinkNull
     runResourceT $
         withResponse "https://hackage.haskell.org/packages/deprecated.json"
             (($$ sinkFile "deprecated.json") . responseBody)
